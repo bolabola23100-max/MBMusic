@@ -2,6 +2,7 @@ import 'dart:ui' as ui;
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+
 import 'package:music/features/player/widgets/thembut.dart';
 import 'package:on_audio_query/on_audio_query.dart';
 
@@ -13,7 +14,6 @@ import 'package:music/core/widgets/app_artwork.dart';
 import 'package:music/core/widgets/app_seek_bar.dart';
 import 'package:music/core/widgets/dialog/my_snack_bar.dart';
 import 'package:music/core/widgets/song_tile_widget.dart';
-import 'package:music/core/widgets/vinyl_widget.dart';
 import 'package:music/features/home/widgets/song_options_bottom_sheet.dart';
 import 'package:music/features/home/widgets/song_title_widget.dart';
 import 'package:music/features/player/cubit/player_cubit.dart';
@@ -22,12 +22,12 @@ import 'package:music/features/player/widgets/player_controls_widget.dart';
 import 'package:music/features/player/widgets/sleep_timer_widget.dart';
 import 'package:music/features/playlist/widgets/add_to_playlist_dialog.dart';
 
-class PlayerScreen extends StatelessWidget {
+class PlayerScreen1 extends StatelessWidget {
   final List<SongModel> songs;
   final int index;
   final Future<void> Function(List<SongModel> songs)? onDeleteSongs;
 
-  const PlayerScreen({
+  const PlayerScreen1({
     super.key,
     required this.songs,
     required this.index,
@@ -38,15 +38,15 @@ class PlayerScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (context) => PlayerCubit(songs: songs, index: index),
-      child: PlayerView(onDeleteSongs: onDeleteSongs),
+      child: PlayerView1(onDeleteSongs: onDeleteSongs),
     );
   }
 }
 
-class PlayerView extends StatelessWidget {
+class PlayerView1 extends StatelessWidget {
   final Future<void> Function(List<SongModel> songs)? onDeleteSongs;
 
-  const PlayerView({super.key, this.onDeleteSongs});
+  const PlayerView1({super.key, this.onDeleteSongs});
 
   @override
   Widget build(BuildContext context) {
@@ -84,13 +84,11 @@ class PlayerView extends StatelessWidget {
             child: Scaffold(
               extendBodyBehindAppBar: true,
               backgroundColor: AppColors.gray,
-
               appBar: _buildAppBar(context, state),
-
               body: Stack(
                 fit: StackFit.expand,
                 children: [
-                  // 🖼️ الخلفية: صورة الاغنية
+                  // 🖼️ الخلفية: صورة الاغنية مكبرة ومبلورة
                   ValueListenableBuilder<int?>(
                     valueListenable: audioService.currentSongIdNotifier,
                     builder: (context, songId, _) {
@@ -110,44 +108,41 @@ class PlayerView extends StatelessWidget {
                     },
                   ),
 
-                  // 🌫️ البلر
+                  // 🌫️ البلر القوي
                   BackdropFilter(
-                    filter: ui.ImageFilter.blur(sigmaX: 80, sigmaY: 80),
-                    child: Container(color: Colors.black.withOpacity(0.3)),
+                    filter: ui.ImageFilter.blur(sigmaX: 100, sigmaY: 100),
+                    child: Container(color: Colors.black.withOpacity(0.55)),
                   ),
 
-                  // 🌑 تدرج اسود في الاسفل عشان الازرار واضحة
-                  Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.transparent,
-                          Colors.black.withOpacity(0.45),
-                        ],
-                        stops: const [0.55, 1.0],
-                      ),
+                  // المحتوى الرئيسي
+                  SafeArea(
+                    child: Column(
+                      children: [
+                        const SizedBox(height: 10),
+                        // 🎵 الصورة في النص (كارت مربع كبير)
+                        Expanded(
+                          flex: 5,
+                          child: Center(
+                            child: _buildCenterArtwork(state, audioService),
+                          ),
+                        ),
+
+                        // معلومات الاغنية
+                        _buildInfoSection(state, audioService),
+
+                        const SizedBox(height: 10),
+
+                        // شريط التقدم بشكل مختلف
+                        _buildSeekBarSection(audioService),
+
+                        const SizedBox(height: 10),
+
+                        // 🎛️ شريط التحكم الجديد (كارت عائم)
+                        _buildBottomControlsCard(context, state, audioService),
+
+                        const SizedBox(height: 16),
+                      ],
                     ),
-                  ),
-
-                  // 🎵 المحتوى الرئيسي
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SizedBox(height: MediaQuery.of(context).padding.top + 60),
-
-                      _buildArtworkSection(state, audioService),
-                      const SizedBox(height: 50),
-
-                      _buildInfoSection(state, audioService),
-
-                      AppSeekBar(audioService: audioService, isT: true),
-
-                      _buildControlsSection(context, state, audioService),
-
-                      const SizedBox(height: 24),
-                    ],
                   ),
                 ],
               ),
@@ -166,12 +161,12 @@ class PlayerView extends StatelessWidget {
       backgroundColor: Colors.transparent,
       surfaceTintColor: Colors.transparent,
       elevation: 0,
-      shadowColor: Colors.black.withOpacity(0.2),
       title: Text(
         "player.title".tr(),
         style: const TextStyle(
-          fontSize: 20,
+          fontSize: 18,
           fontWeight: FontWeight.w600,
+          letterSpacing: 1.2,
           color: AppColors.white,
         ),
       ),
@@ -201,49 +196,47 @@ class PlayerView extends StatelessWidget {
     );
   }
 
-  Widget _buildArtworkSection(PlayerState state, AudioService audioService) {
+  /// 🟦 الصورة في النص بدون اسطوانة - كارت مربع كبير بظل وحواف ناعمة
+  Widget _buildCenterArtwork(PlayerState state, AudioService audioService) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final screenWidth = MediaQuery.of(context).size.width;
         final isTablet = screenWidth > 600;
-        final artworkSize = isTablet ? 180.0 : 150.0;
-        final vinylSize = isTablet ? 250.0 : 150.0;
-        final horizontalOffset = isTablet ? 130.0 : 100.0;
+        final artworkSize = isTablet ? 360.0 : screenWidth * 0.78;
 
         return ValueListenableBuilder<int?>(
           valueListenable: audioService.currentSongIdNotifier,
           builder: (context, currentSongId, _) {
-            return Stack(
-              children: [
-                Center(
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 20, right: 10),
-                    child: VinylWidget(
-                      audioService: audioService,
-                      size: vinylSize,
-                    ),
+            return Container(
+              width: artworkSize,
+              height: artworkSize,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(28),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.4),
+                    blurRadius: 30,
+                    offset: const Offset(0, 15),
                   ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(30),
+                child: AppArtwork(
+                  id:
+                      currentSongId ??
+                      state
+                          .songs[state.currentIndex.clamp(
+                            0,
+                            state.songs.length - 1,
+                          )]
+                          .id,
+                  size: artworkSize,
+                  borderRadius: 28,
+                  customArtPath: state.customArtPath,
+                  highQuality: true,
                 ),
-                Center(
-                  child: Padding(
-                    padding: EdgeInsets.only(top: 20, right: horizontalOffset),
-                    child: AppArtwork(
-                      id:
-                          currentSongId ??
-                          state
-                              .songs[state.currentIndex.clamp(
-                                0,
-                                state.songs.length - 1,
-                              )]
-                              .id,
-                      size: artworkSize,
-                      borderRadius: isTablet ? 24 : 16,
-                      customArtPath: state.customArtPath,
-                      highQuality: true,
-                    ),
-                  ),
-                ),
-              ],
+              ),
             );
           },
         );
@@ -253,7 +246,7 @@ class PlayerView extends StatelessWidget {
 
   Widget _buildInfoSection(PlayerState state, AudioService audioService) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
       child: ValueListenableBuilder<String?>(
         valueListenable: audioService.currentTitleNotifier,
         builder: (context, title, _) => ValueListenableBuilder<String?>(
@@ -269,69 +262,111 @@ class PlayerView extends StatelessWidget {
     );
   }
 
-  Widget _buildControlsSection(
+  /// 🎚️ شريط تقدم بشكل مختلف: داخل كبسولة بحدود ولون مميز
+  Widget _buildSeekBarSection(AudioService audioService) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.06),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white.withOpacity(0.08)),
+        ),
+        child: AppSeekBar(audioService: audioService, isT: true),
+      ),
+    );
+  }
+
+  /// 🟪 شريط التحكم السفلي بشكل كارت عائم مختلف عن الديزاين الأول
+  Widget _buildBottomControlsCard(
     BuildContext context,
     PlayerState state,
     AudioService audioService,
   ) {
-    return Column(
-      children: [
-        PlayerControlsWidget(
-          audioService: audioService,
-          onPlayNext: audioService.playNext,
-          onPlayPrevious: audioService.playPrevious,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 18),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(28),
+          border: Border.all(color: Colors.white.withOpacity(0.1)),
         ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 20),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              ValueListenableBuilder<PlaybackMode>(
-                valueListenable: audioService.playbackModeNotifier,
-                builder: (context, mode, _) {
-                  IconData icon = switch (mode) {
-                    PlaybackMode.sequential => Icons.repeat,
-                    PlaybackMode.repeatOne => Icons.repeat_one,
-                    PlaybackMode.shuffle => Icons.shuffle,
-                  };
+        child: Column(
+          children: [
+            PlayerControlsWidget(
+              audioService: audioService,
+              onPlayNext: audioService.playNext,
+              onPlayPrevious: audioService.playPrevious,
+            ),
+            const SizedBox(height: 6),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  ValueListenableBuilder<PlaybackMode>(
+                    valueListenable: audioService.playbackModeNotifier,
+                    builder: (context, mode, _) {
+                      IconData icon = switch (mode) {
+                        PlaybackMode.sequential => Icons.repeat,
+                        PlaybackMode.repeatOne => Icons.repeat_one,
+                        PlaybackMode.shuffle => Icons.shuffle,
+                      };
 
-                  return IconButton(
-                    icon: Icon(icon, color: AppColors.white, size: 28),
-                    onPressed: () =>
-                        _showPlaybackModeSheet(context, mode, audioService),
-                  );
-                },
+                      return _circleIconButton(
+                        icon: icon,
+                        onTap: () =>
+                            _showPlaybackModeSheet(context, mode, audioService),
+                      );
+                    },
+                  ),
+
+                  _circleIconButton(
+                    icon: Icons.playlist_add,
+                    onTap: () {
+                      final safeIndex = state.currentIndex.clamp(
+                        0,
+                        state.songs.length - 1,
+                      );
+                      showDialog(
+                        context: context,
+                        builder: (_) => AddToPlaylistDialog(
+                          songs: [state.songs[safeIndex]],
+                        ),
+                      ).then((_) {
+                        MySnackBar(context: context).showSnackBar(
+                          "playlist_dialogs.add_to_playlist".tr(),
+                          AppColors.blue,
+                        );
+                      });
+                    },
+                  ),
+
+                  SleepTimerWidget(audioService: audioService),
+                ],
               ),
-
-              IconButton(
-                icon: const Icon(
-                  Icons.playlist_add,
-                  color: AppColors.white,
-                  size: 28,
-                ),
-                onPressed: () {
-                  final safeIndex = state.currentIndex.clamp(
-                    0,
-                    state.songs.length - 1,
-                  );
-                  showDialog(
-                    context: context,
-                    builder: (_) =>
-                        AddToPlaylistDialog(songs: [state.songs[safeIndex]]),
-                  ).then((_) {
-                    MySnackBar(context: context).showSnackBar(
-                      "playlist_dialogs.add_to_playlist".tr(),
-                      AppColors.blue,
-                    );
-                  });
-                },
-              ),
-
-              SleepTimerWidget(audioService: audioService),
-            ],
-          ),
+            ),
+          ],
         ),
-      ],
+      ),
+    );
+  }
+
+  Widget _circleIconButton({
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Colors.white.withOpacity(0.08),
+      ),
+      child: IconButton(
+        icon: Icon(icon, color: AppColors.white, size: 24),
+        onPressed: onTap,
+      ),
     );
   }
 
@@ -340,7 +375,6 @@ class PlayerView extends StatelessWidget {
     PlaybackMode currentMode,
     AudioService audioService,
   ) {
-    // باقي دالة الـ Bottom Sheet نفسها بالضبط زي ما كانت
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -508,7 +542,7 @@ class PlayerView extends StatelessWidget {
                                           Navigator.pop(context);
                                           AppNavigator.push(
                                             context,
-                                            PlayerScreen(
+                                            PlayerScreen1(
                                               songs: displayQueue,
                                               index: index,
                                             ),
